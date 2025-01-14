@@ -1,0 +1,51 @@
+# RKE2 | DigitalOcean | Rancher/Cert-manager/Longhorn/NeuVector/StackSate
+
+This repo will allow you to create a rke2 cluster with the desired number of nodes and will deploy automatically the following components:
+
+    - Rancher: Automatically deployed with HTTPS ingress resource and valid SSL cert.
+    - Cert-manager: Automatically deployed. Used to create ingress HTTPS certificates.
+    - Longhorn: Storage Provider is only installed if the variable longhorn_install is set to true. All dependencies to make Longhorn work are automatically deployed when variable is defined as expected.
+    - Neuvector: Only installed if variable neuvector_install is set to true with HTTPS ingress resource and valid SSL cert. In case that Longhorn has been installed NeuVector will be configured with a 30GB PVC for controller pods.
+    - StackSate: Only installed if the following variables have been defined as follow: stackstate_install=true, stackstate_license="<LICENSE>" and longhorn_install=true with HTTPS ingress resource and valid SSL cert.
+## Usage
+
+```bash
+git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
+```
+
+- Copy `./terraform.tfvars.example` to `./terraform.tfvars`
+- Edit `./terraform.tfvars`
+  - Update the required variables:
+    -  `do_token` To specify the token used to authenticate with DigitalOcean API.
+    -  `region` Region where droplets and LoadBalancer will be created. The following link can be useful to select DigitalOcean region. -> https://slugs.do-api.dev/
+    -  `size` Droplet size. The following link can be useful to select Droplet size. -> https://slugs.do-api.dev/
+    -  `droplet_count` to specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
+    -  `prefix` To specify prefix defined in objects created on DigitalOcean.
+    -  `rke2_token` To specify RKE2 token required to configure nodes.
+    -  `rancher_password` to configure the initial Admin rancher password (the password must be at least 12 characters).
+    -  `ssh_private_key_path` To define path where SSH private key is located. SSH public key must be uploaded to DigitalOcean Account for Terraform script to work.
+    
+#### IMPORTANT INFORMATION
+
+- The required variables explained before will help to create a RKE2 cluster by deploying only Rancher and Cert-manager components with valid HTTPS access. In case that you want leverage and use all the potential of the Terraform script you may want to use the rest of the variables:
+  - Optional variables:
+    - `kubeconfig_path` To specify where Kubeconfig file will be located to execute Kubectl commands to the cluster created. By default, it will be located at the current folder.
+    - `longhorn_install` If longhorn_install variable is set to true Longhorn will be deployed and nodes will be configured for longhorn to work. By default, longhorn_install variable is set to false.
+    - `neuvector_install` If neuvector_install variable is set to true NeuVector will be deployed and if longhorn_install is true Neuvector will be configured with persistent storage. By default, neuvector_install variable is set to false.
+    - `stackstate_install` If stackstate_install variable is set to true, stackstate_license variable contains a license and longhorn_install variable is set to true StackState will be deployed. By default, stackstate_install variable is set to false.
+    - `stackstate_license` To define valid StackState license.
+    - `stackstate_sizing` To define StackState size based on the StackState documentation https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements. Please ensure that RKE2 cluster that will be deployed has enough storage and CPU/Memory available to deploy StackState before defining size.
+    - `rancher/neuvector/longhorn_version` To define component helm version deployed. By default, it will deploy latest helm version available.
+
+#### Terraform Apply
+
+```bash
+terraform init -upgrade && terraform apply -auto-approve
+```
+
+#### Terraform Destroy
+
+```bash
+terraform destroy -auto-approve
+```
+

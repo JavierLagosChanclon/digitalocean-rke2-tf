@@ -1,0 +1,17 @@
+do_token = ""
+region = ""
+size = ""
+droplet_count = 1
+prefix = ""
+rke2_token = ""
+ssh_private_key_path = ""
+rancher_password = ""
+# kubeconfig_path = ""
+# rancher_version = ""
+# neuvector_install = true
+# longhorn_install = true
+# neuvector_version = ""
+# longhorn_version = ""
+# stackstate_install = true
+# stackstate_license = ""
+# stackstate_sizing = ""
