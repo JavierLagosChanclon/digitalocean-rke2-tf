@@ -109,6 +109,6 @@ variable "stackstate_sizing" {
   default = "trial"
   validation {
     condition = contains(["trial", "10-nonha", "20-nonha", "50-nonha", "100-nonha", "150-ha", "250-ha", "500-ha"], var.stackstate_sizing)
-    error_message = "Please, specify a valid StackState size"
+    error_message = "Please, specify a valid StackState size. Please see following URL https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements"
   }
 }
