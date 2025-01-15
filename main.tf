@@ -23,20 +23,17 @@ resource "digitalocean_droplet" "nodes" {
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | sh -",
-      "systemctl enable rke2-server.service && systemctl start rke2-server.service",
-      "modprobe dm-crypt && apt-get remove multipath-tools -y"
+      "systemctl enable rke2-server.service && systemctl start rke2-server.service"
     ] : count.index < 3 ? [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | sh -",
-      "systemctl enable rke2-server.service && systemctl start rke2-server.service",
-      "modprobe dm-crypt && apt-get remove multipath-tools -y"
+      "systemctl enable rke2-server.service && systemctl start rke2-server.service"
     ] : [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=\"agent\" sh -",
-      "systemctl enable rke2-agent.service && systemctl start rke2-agent.service",
-      "modprobe dm-crypt && apt-get remove multipath-tools -y"
+      "systemctl enable rke2-agent.service && systemctl start rke2-agent.service"
     ]
   }
 }
@@ -85,11 +82,21 @@ resource "null_resource" "modify_kubeconfig" {
       sed -i '' 's/server: https:\/\/127.0.0.1:6443/server: https:\/\/${digitalocean_droplet.nodes[0].ipv4_address}:6443/g' ${local.kc_path}/${var.prefix}_kubeconfig.yaml
     EOF
   }
-  connection {
-    type        = "ssh"
-    user        = "root"
-    private_key = file(var.ssh_private_key_path)
-    host        = digitalocean_droplet.nodes[0].ipv4_address
+}
+
+resource "null_resource" "longhorn_dependency" {
+  count = var.longhorn_install ? var.droplet_count : 0
+  depends_on = [digitalocean_loadbalancer.rke2_lb]
+  provisioner "remote-exec" {
+    inline = [
+      "modprobe dm-crypt && apt-get remove multipath-tools -y"
+    ]
+    connection {
+      type        = "ssh"
+      user        = "root"
+      private_key = file(var.ssh_private_key_path)
+      host        = digitalocean_droplet.nodes[count.index].ipv4_address
+    }
   }
 }
 
