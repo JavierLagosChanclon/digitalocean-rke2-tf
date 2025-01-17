@@ -17,14 +17,14 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
 - Edit `./terraform.tfvars`
   - Update the required variables:
     -  `do_token` To specify the token used to authenticate with DigitalOcean API.
-    -  `region` Region where droplets and LoadBalancer will be created. The following link can be useful to select DigitalOcean region. -> https://slugs.do-api.dev/
-    -  `size` Droplet size. The following link can be useful to select Droplet size. -> https://slugs.do-api.dev/
-    -  `droplet_count` to specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
+    -  `region` To define region where droplets and LoadBalancer will be created. The following link can be useful to select DigitalOcean region. -> https://slugs.do-api.dev/
+    -  `size` To define Droplet size. The following link can be useful to select Droplet size. -> https://slugs.do-api.dev/
+    -  `droplet_count` Oo specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
     -  `prefix` To specify prefix defined in objects created on DigitalOcean.
     -  `rke2_token` To specify RKE2 token required to configure nodes.
-    -  `rancher_password` to configure the initial Admin rancher password (the password must be at least 12 characters).
+    -  `rancher_password` To configure the initial Admin rancher password (the password must be at least 12 characters).
     -  `ssh_private_key_path` To define path where SSH private key is located. SSH public key must be uploaded to DigitalOcean Account for Terraform script to work.
-    
+    -  `do_public_key_name` To define SSH public key which has been uploaded to DigitalOcean account.
 #### IMPORTANT INFORMATION
 
 - The required variables explained before will help to create a RKE2 cluster by deploying only Rancher and Cert-manager components with valid HTTPS access. In case that you want leverage and use all the potential of the Terraform script you may want to use the rest of the variables:
@@ -36,7 +36,8 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     - `stackstate_license` To define valid StackState license.
     - `stackstate_sizing` To define StackState size based on the StackState documentation https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements. Please ensure that RKE2 cluster that will be deployed has enough storage and CPU/Memory available to deploy StackState before defining size.
     - `rancher/neuvector/longhorn_version` To define component helm version deployed. By default, it will deploy latest helm version available.
-
+  - StackState Ingress URL will not be available until 5/10 minutes after Terraform script has finished since StackState requires more time the first time it is installed.
+  - StackState Admin password can be found in the suse_observability_password.txt file inside suse-observability-values/templates directory after Terraform script has finished.
 #### Terraform Apply
 
 ```bash

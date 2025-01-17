@@ -5,6 +5,7 @@ droplet_count = 1
 prefix = ""
 rke2_token = ""
 ssh_private_key_path = ""
+do_public_key_name = ""
 rancher_password = ""
 # kubeconfig_path = ""
 # rancher_version = ""

@@ -1,7 +1,9 @@
 locals {
   kc_path        = var.kubeconfig_path != null ? var.kubeconfig_path : path.cwd
 }
-data "digitalocean_ssh_keys" "all_ssh_keys" {}
+data "digitalocean_ssh_key" "my_do_ssh_key" {
+  name = var.do_public_key_name
+}
 
 resource "digitalocean_droplet" "nodes" {
   count  = var.droplet_count
@@ -9,9 +11,7 @@ resource "digitalocean_droplet" "nodes" {
   region = var.region
   size   = var.size
   image  = "ubuntu-20-04-x64"
-  ssh_keys = [
-    for key in data.digitalocean_ssh_keys.all_ssh_keys.ssh_keys : key.id
-  ]
+  ssh_keys = [data.digitalocean_ssh_key.my_do_ssh_key.id]
   connection {
     type        = "ssh"
     user        = "root"
