@@ -1,4 +1,4 @@
-# RKE2 | DigitalOcean | Rancher/Cert-manager/Longhorn/NeuVector/StackSate
+# RKE2 | DigitalOcean | Rancher/Cert-manager/Longhorn/NeuVector/StackState
 
 This repo will allow you to create a rke2 cluster with the desired number of nodes and will deploy automatically the following components:
 
