@@ -23,12 +23,12 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     -  `prefix` To specify prefix defined in objects created on DigitalOcean.
     -  `rke2_token` To specify RKE2 token required to configure nodes.
     -  `rancher_password` To configure the initial Admin rancher password (the password must be at least 12 characters).
-    -  `ssh_private_key_path` To define path where SSH private key is located. SSH public key must be uploaded to DigitalOcean Account for Terraform script to work.
-    -  `do_public_key_name` To define SSH public key which has been uploaded to DigitalOcean account.
+
 #### IMPORTANT INFORMATION
 
 - The required variables explained before will help to create a RKE2 cluster by deploying only Rancher and Cert-manager components with valid HTTPS access. In case that you want leverage and use all the potential of the Terraform script you may want to use the rest of the variables:
   - Optional variables:
+    - `rke2_version` To define rke2 version installed. By default it will install stable latest version available.
     - `kubeconfig_path` To specify where Kubeconfig file will be located to execute Kubectl commands to the cluster created. By default, it will be located at the current folder.
     - `longhorn_install` If longhorn_install variable is set to true Longhorn will be deployed and nodes will be configured for longhorn to work. By default, longhorn_install variable is set to false.
     - `neuvector_install` If neuvector_install variable is set to true NeuVector will be deployed and if longhorn_install is true Neuvector will be configured with persistent storage. By default, neuvector_install variable is set to false.

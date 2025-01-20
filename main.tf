@@ -1,9 +1,31 @@
 locals {
   kc_path        = var.kubeconfig_path != null ? var.kubeconfig_path : path.cwd
+  rke2_version   = var.rke2_version != "" ? var.rke2_version : ""
+  ssh_private_key_path = "${path.cwd}/${var.prefix}-ssh_private_key.pem"
+  ssh_public_key_path  = "${path.cwd}/${var.prefix}-ssh_public_key.pem"
 }
-data "digitalocean_ssh_key" "my_do_ssh_key" {
-  name = var.do_public_key_name
+
+resource "tls_private_key" "ssh_private_key" {
+  algorithm = "ED25519"
 }
+
+resource "local_file" "private_key_pem" {
+  filename        = local.ssh_private_key_path
+  content         = tls_private_key.ssh_private_key.private_key_openssh
+  file_permission = "0600"
+}
+
+resource "local_file" "public_key_pem" {
+  filename        = local.ssh_public_key_path
+  content         = tls_private_key.ssh_private_key.public_key_openssh
+  file_permission = "0600"
+}
+
+resource "digitalocean_ssh_key" "do_pub_created_ssh" {
+  name       = "${var.prefix}-pub"
+  public_key = tls_private_key.ssh_private_key.public_key_openssh
+}
+
 
 resource "digitalocean_droplet" "nodes" {
   count  = var.droplet_count
@@ -11,28 +33,28 @@ resource "digitalocean_droplet" "nodes" {
   region = var.region
   size   = var.size
   image  = "ubuntu-20-04-x64"
-  ssh_keys = [data.digitalocean_ssh_key.my_do_ssh_key.id]
+  ssh_keys = [digitalocean_ssh_key.do_pub_created_ssh.id]
   connection {
     type        = "ssh"
     user        = "root"
-    private_key = file(var.ssh_private_key_path)
+    private_key = tls_private_key.ssh_private_key.private_key_openssh
     host        = self.ipv4_address
   }
   provisioner "remote-exec" {
     inline = count.index == 0 ? [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml",
-      "curl -sfL https://get.rke2.io | sh -",
+      "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
     ] : count.index < 3 ? [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
-      "curl -sfL https://get.rke2.io | sh -",
+      "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
     ] : [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
-      "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=\"agent\" sh -",
+      "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=\"agent\" INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-agent.service && systemctl start rke2-agent.service"
     ]
   }
@@ -78,7 +100,7 @@ resource "null_resource" "modify_kubeconfig" {
   depends_on = [digitalocean_loadbalancer.rke2_lb]
   provisioner "local-exec" {
     command = <<EOF
-      scp -o  StrictHostKeyChecking=no -i ${var.ssh_private_key_path} root@${digitalocean_droplet.nodes[0].ipv4_address}:/etc/rancher/rke2/rke2.yaml ${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      scp -o  StrictHostKeyChecking=no -i ${local.ssh_private_key_path} root@${digitalocean_droplet.nodes[0].ipv4_address}:/etc/rancher/rke2/rke2.yaml ${local.kc_path}/${var.prefix}_kubeconfig.yaml
       sed -i '' 's/server: https:\/\/127.0.0.1:6443/server: https:\/\/${digitalocean_droplet.nodes[0].ipv4_address}:6443/g' ${local.kc_path}/${var.prefix}_kubeconfig.yaml
     EOF
   }
@@ -94,7 +116,7 @@ resource "null_resource" "longhorn_dependency" {
     connection {
       type        = "ssh"
       user        = "root"
-      private_key = file(var.ssh_private_key_path)
+      private_key = tls_private_key.ssh_private_key.private_key_openssh
       host        = digitalocean_droplet.nodes[count.index].ipv4_address
     }
   }

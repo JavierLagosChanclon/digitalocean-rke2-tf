@@ -36,16 +36,10 @@ variable "prefix" {
   default     = null
 }
 
-variable "ssh_private_key_path" {
-  description = "private SSH key used to access DO droplets"
+variable "rke2_version" {
+  description = "rke2 installed version"
   type        = string
-  default     = null
-}
-
-variable "do_public_key_name" {
-  description = "digitalOcean SSH public key name uploaded to the account"
-  type        = string
-  default     = null
+  default     = ""
 }
 
 variable "rke2_token" {
