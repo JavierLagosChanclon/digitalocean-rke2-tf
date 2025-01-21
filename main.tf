@@ -30,6 +30,7 @@ resource "digitalocean_ssh_key" "do_pub_created_ssh" {
 resource "digitalocean_droplet" "nodes" {
   count  = var.droplet_count
   name   = "node-${var.prefix}-${count.index + 1}"
+  tags = ["user:${var.prefix}"]
   region = var.region
   size   = var.size
   image  = "ubuntu-20-04-x64"

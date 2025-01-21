@@ -1,12 +1,14 @@
 # RKE2 | DigitalOcean | Rancher/Cert-manager/Longhorn/NeuVector/StackState
 
 This repo will allow you to create a rke2 cluster with the desired number of nodes and will deploy automatically the following components:
+```
+- Rancher: Automatically deployed with HTTPS ingress resource and valid SSL cert.
+- Cert-manager: Automatically deployed. Used to create ingress HTTPS certificates.
+- Longhorn: Storage Provider is only installed if the variable longhorn_install is set to true. All dependencies to make Longhorn work are automatically deployed when variable is defined as expected.
+- Neuvector: Only installed if variable neuvector_install is set to true with HTTPS ingress resource and valid SSL cert. In case that Longhorn has been installed NeuVector will be configured with a 30GB PVC for controller pods.
+- StackSate: Only installed if the following variables have been defined as follow: stackstate_install=true, stackstate_license="<LICENSE>" and longhorn_install=true with HTTPS ingress resource and valid SSL cert.
+```
 
-    - Rancher: Automatically deployed with HTTPS ingress resource and valid SSL cert.
-    - Cert-manager: Automatically deployed. Used to create ingress HTTPS certificates.
-    - Longhorn: Storage Provider is only installed if the variable longhorn_install is set to true. All dependencies to make Longhorn work are automatically deployed when variable is defined as expected.
-    - Neuvector: Only installed if variable neuvector_install is set to true with HTTPS ingress resource and valid SSL cert. In case that Longhorn has been installed NeuVector will be configured with a 30GB PVC for controller pods.
-    - StackSate: Only installed if the following variables have been defined as follow: stackstate_install=true, stackstate_license="<LICENSE>" and longhorn_install=true with HTTPS ingress resource and valid SSL cert.
 ## Usage
 
 ```bash
@@ -38,6 +40,30 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     - `rancher/neuvector/longhorn_version` To define component helm version deployed. By default, it will deploy latest helm version available.
   - StackState Ingress URL will not be available until 5/10 minutes after Terraform script has finished since StackState requires more time the first time it is installed.
   - StackState Admin password can be found in the suse_observability_password.txt file inside suse-observability-values/templates directory after Terraform script has finished.
+
+#### terraform.tfvars example
+- Here can be found an example of terraform.tfvars file.
+```
+do_token = "<do-access-token>"
+region = "fra1"
+size = "s-8vcpu-16gb"
+droplet_count = 3
+prefix = "<your-name>-rke2"
+#rke2_version = ""
+rke2_token = "my-token-created"
+rancher_password = "<rancher-password>"
+# kubeconfig_path = ""
+# rancher_version = ""
+neuvector_install = true
+longhorn_install = true
+# neuvector_version = ""
+# longhorn_version = ""
+stackstate_install = true
+stackstate_license = "<stackstate-license>"
+stackstate_sizing = "trial"
+```
+
+
 #### Terraform Apply
 
 ```bash
