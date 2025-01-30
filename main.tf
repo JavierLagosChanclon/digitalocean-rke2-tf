@@ -33,7 +33,7 @@ resource "digitalocean_droplet" "nodes" {
   tags = ["user:${var.prefix}"]
   region = var.region
   size   = var.size
-  image  = "ubuntu-20-04-x64"
+  image  = "ubuntu-22-04-x64"
   ssh_keys = [digitalocean_ssh_key.do_pub_created_ssh.id]
   connection {
     type        = "ssh"
@@ -112,7 +112,7 @@ resource "null_resource" "longhorn_dependency" {
   depends_on = [digitalocean_loadbalancer.rke2_lb]
   provisioner "remote-exec" {
     inline = [
-      "modprobe dm-crypt && apt-get remove multipath-tools -y"
+      "modprobe dm-crypt && systemctl stop multipathd  && systemctl disable multipathd && systemctl mask multipathd"
     ]
     connection {
       type        = "ssh"
@@ -135,7 +135,9 @@ resource "null_resource" "wait_for_kubernetes" {
     echo "Kubernetes API is ready!"
     if [ "${var.longhorn_install}" = "true" ]; then
       echo "Applying Longhorn NFS prerequisite installation..."
-      kubectl --kubeconfig=${local.kc_path}/${var.prefix}_kubeconfig.yaml create ns longhorn-system && kubectl apply --kubeconfig=${local.kc_path}/${var.prefix}_kubeconfig.yaml -f https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/deploy/prerequisite/longhorn-nfs-installation.yaml -n longhorn-system
+      kubectl --kubeconfig=${local.kc_path}/${var.prefix}_kubeconfig.yaml create ns longhorn-system && kubectl apply --kubeconfig=${local.kc_path}/${var.prefix}_kubeconfig.yaml -f https://raw.githubusercontent.com/longhorn/longhorn/v1.8.0/deploy/prerequisite/longhorn-nfs-installation.yaml -n longhorn-system
+      echo "Waiting until NFS installation is completed on all nodes"
+      kubectl --kubeconfig=${local.kc_path}/${var.prefix}_kubeconfig.yaml wait --for condition=ready pod -l app=longhorn-nfs-installation -n longhorn-system --timeout 900s
     fi
     EOF
   }
@@ -241,6 +243,10 @@ controller:
   federation:
     mastersvc:
       type: NodePort
+      nodePort: 32045
+    managedsvc:
+      type: NodePort
+      nodePort: 32046
   apisvc:
     type: ClusterIP
 cve:
