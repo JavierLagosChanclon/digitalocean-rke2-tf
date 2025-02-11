@@ -194,6 +194,8 @@ ingress:
 letsEncrypt:
   ingress:
     class: nginx
+postDelete:
+  enabled: false
 EOF
   ]
 }
