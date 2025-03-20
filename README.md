@@ -21,7 +21,7 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     -  `do_token` To specify the token used to authenticate with DigitalOcean API.
     -  `region` To define region where droplets and LoadBalancer will be created. The following link can be useful to select DigitalOcean region. -> https://slugs.do-api.dev/
     -  `size` To define Droplet size. The following link can be useful to select Droplet size. -> https://slugs.do-api.dev/
-    -  `droplet_count` Oo specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
+    -  `droplet_count` To specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
     -  `prefix` To specify prefix defined in objects created on DigitalOcean.
     -  `rke2_token` To specify RKE2 token required to configure nodes.
     -  `rancher_password` To configure the initial Admin rancher password (the password must be at least 12 characters).
