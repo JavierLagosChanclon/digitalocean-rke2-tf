@@ -33,7 +33,7 @@ resource "digitalocean_droplet" "nodes" {
   tags = ["user:${var.prefix}"]
   region = var.region
   size   = var.size
-  image  = "ubuntu-22-04-x64"
+  image  = "ubuntu-24-04-x64"
   ssh_keys = [digitalocean_ssh_key.do_pub_created_ssh.id]
   connection {
     type        = "ssh"
@@ -271,7 +271,7 @@ EOF
 
 resource "local_file" "observability_ingress_values" {
   count = var.longhorn_install && var.stackstate_install && var.stackstate_license != null ? 1 : 0
-  depends_on = [helm_release.neuvector-core]
+  depends_on = [null_resource.create_cluster_issuer]
   content = templatefile("${path.cwd}/suse-observability-values/templates/ingress_values.tpl", {
     baseUrl         = "observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io"
   })
@@ -280,7 +280,7 @@ resource "local_file" "observability_ingress_values" {
 
 resource "null_resource" "suse_observability_template" {
   count = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
-  depends_on = [helm_release.neuvector-core]
+  depends_on = [null_resource.create_cluster_issuer]
   provisioner "local-exec" {
     command = <<EOT
       helm repo add suse-observability https://charts.rancher.com/server-charts/prime/suse-observability
