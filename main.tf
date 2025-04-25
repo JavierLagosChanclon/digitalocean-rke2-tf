@@ -180,7 +180,7 @@ resource "helm_release" "rancher" {
   name       = "rancher"
   chart      = "rancher"
   namespace  = "cattle-system"
-  repository = "https://releases.rancher.com/server-charts/latest"
+  repository = "https://charts.rancher.com/server-charts/prime"
   version = var.rancher_version != "" ? var.rancher_version : null
   create_namespace = true
   depends_on = [helm_release.cert-manager]
