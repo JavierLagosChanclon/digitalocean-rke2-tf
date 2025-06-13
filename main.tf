@@ -61,6 +61,20 @@ resource "digitalocean_droplet" "nodes" {
   }
 }
 
+resource "null_resource" "rke2_nginx_ingress_config"{
+  depends_on = [digitalocean_droplet.nodes]
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = tls_private_key.ssh_private_key.private_key_openssh
+    host        = digitalocean_droplet.nodes[0].ipv4_address
+  }
+  provisioner "file" {
+    source      = "${path.module}/files/rke2-ingress-nginx-config.yaml"
+    destination = "/var/lib/rancher/rke2/server/manifests/rke2-ingress-nginx-config.yaml"
+  }
+}
+
 resource "digitalocean_loadbalancer" "rke2_lb" {
   name   = "loadbalancer-${var.prefix}"
   region = var.region
@@ -102,7 +116,8 @@ resource "null_resource" "modify_kubeconfig" {
   provisioner "local-exec" {
     command = <<EOF
       scp -o  StrictHostKeyChecking=no -i ${local.ssh_private_key_path} root@${digitalocean_droplet.nodes[0].ipv4_address}:/etc/rancher/rke2/rke2.yaml ${local.kc_path}/${var.prefix}_kubeconfig.yaml
-      sed -i '' 's/server: https:\/\/127.0.0.1:6443/server: https:\/\/${digitalocean_droplet.nodes[0].ipv4_address}:6443/g' ${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      sed -i.bak "s|server: https://127.0.0.1:6443|server: https://${digitalocean_droplet.nodes[0].ipv4_address}:6443|g" "${local.kc_path}/${var.prefix}_kubeconfig.yaml"
+      rm ${local.kc_path}/${var.prefix}_kubeconfig.yaml.bak
     EOF
   }
 }
@@ -196,6 +211,7 @@ letsEncrypt:
     class: nginx
 postDelete:
   enabled: false
+agentTLSMode: system-store
 EOF
   ]
 }
@@ -283,10 +299,19 @@ resource "null_resource" "suse_observability_template" {
   depends_on = [null_resource.create_cluster_issuer]
   provisioner "local-exec" {
     command = <<EOT
-      helm repo add suse-observability https://charts.rancher.com/server-charts/prime/suse-observability
-      helm template --set license='${var.stackstate_license}' --set baseUrl='https://observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io' --set sizing.profile='${var.stackstate_sizing}' suse-observability-values suse-observability/suse-observability-values --output-dir .
-      cat ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml| grep "Observability admin password" | awk '{print $8}' > ${path.cwd}/suse-observability-values/templates/suse_observability_password.txt
-      helm --kubeconfig ${local.kc_path}/${var.prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml --create-namespace
+    helm repo add suse-observability https://charts.rancher.com/server-charts/prime/suse-observability
+    helm template --set license='${var.stackstate_license}' --set baseUrl='https://observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io' --set sizing.profile='${var.stackstate_sizing}' suse-observability-values suse-observability/suse-observability-values --output-dir .
+    helm --kubeconfig ${local.kc_path}/${var.prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml --create-namespace
     EOT
   }
+}
+
+data "external" "suse_observability_password" {
+  count = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
+  depends_on = [null_resource.suse_observability_template]
+  program = ["bash", "-c", <<EOT
+    PASSWORD=$(cat suse-observability-values/templates/baseConfig_values.yaml | grep "Observability admin password" | awk '{print $8}')
+    echo "{\"password\": \"$PASSWORD\"}"
+  EOT
+  ]
 }

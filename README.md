@@ -39,7 +39,7 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     - `stackstate_sizing` To define StackState size based on the StackState documentation https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements. Please ensure that RKE2 cluster that will be deployed has enough storage and CPU/Memory available to deploy StackState before defining size.
     - `rancher/neuvector/longhorn_version` To define component helm version deployed. By default, it will deploy latest helm version available.
   - StackState Ingress URL will not be available until 5/10 minutes after Terraform script has finished since StackState requires more time the first time it is installed.
-  - StackState Admin password can be found in the suse_observability_password.txt file inside suse-observability-values/templates directory after Terraform script has finished.
+  - StackState Admin password will be displayed on the output when terraform script finishes. If you want to see it again please run `terraform output`
 
 #### terraform.tfvars example
 - Here can be found an example of terraform.tfvars file.

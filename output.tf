@@ -18,3 +18,8 @@ output "SuseObservability_url" {
   value = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? "https://observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io" : null
   description = "SuseObservability_url"
 }
+
+output "SuseObservability_password" {
+  value = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? data.external.suse_observability_password[0].result["password"] : null
+  description = "SuseObservability_password"
+}
