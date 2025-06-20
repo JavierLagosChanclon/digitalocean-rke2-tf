@@ -3,7 +3,7 @@ provider "digitalocean" {
 }
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     config_path = "${local.kc_path}/${var.prefix}_kubeconfig.yaml"
   }
 }
