@@ -37,13 +37,13 @@ variable "prefix" {
 }
 
 variable "rke2_version" {
-  description = "Rke2 installed version"
+  description = "RKE2 installed version"
   type        = string
   default     = ""
 }
 
 variable "rke2_token" {
-  description = "Token used by rke2 server configuration"
+  description = "Token used by RKE2 server configuration"
   type        = string
   default     = null
   sensitive   = true

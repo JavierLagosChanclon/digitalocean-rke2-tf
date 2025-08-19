@@ -40,6 +40,11 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     - `rancher/neuvector/longhorn_version` To define component helm version deployed. By default, it will deploy latest helm version available.
   - StackState Ingress URL will not be available until 5/10 minutes after Terraform script has finished since StackState requires more time the first time it is installed.
   - StackState Admin password will be displayed on the output when terraform script finishes. If you want to see it again please run `terraform output`
+    - `create_downstream_cluster` To define if a downstream cluster attached to upstream rancher should be created.
+    - `downstream_droplet_count` To specify the number of downstream nodes to create.
+    - `downstream_size` To specify the droplet size for downstream nodes.
+    - `downstream_cni` To define CNI type used by downstream cluster. You can choose between canal, calico and flannel
+  - Downstream cluster won't be available until you access rancher webUI for the first time after finishing the terraform script. After accessing Rancher webUI please wait a couple of minutes for the downstream cluster to be ready.
 
 #### terraform.tfvars example
 - Here can be found an example of terraform.tfvars file.
@@ -61,6 +66,10 @@ longhorn_install = true
 stackstate_install = true
 stackstate_license = "<stackstate-license>"
 stackstate_sizing = "trial"
+# create_downstream_cluster = true/false
+# downstream_droplet_count = 1
+# downstream_cni = ""
+# downstream_size = ""
 ```
 
 
