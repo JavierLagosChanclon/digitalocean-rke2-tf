@@ -1,8 +1,11 @@
 locals {
-  kc_path        = var.kubeconfig_path != null ? var.kubeconfig_path : path.cwd
-  rke2_version   = var.rke2_version != "" ? var.rke2_version : ""
-  ssh_private_key_path = "${path.cwd}/${var.prefix}-ssh_private_key.pem"
-  ssh_public_key_path  = "${path.cwd}/${var.prefix}-ssh_public_key.pem"
+  kc_path                 = var.kubeconfig_path != null ? var.kubeconfig_path : path.cwd
+  rke2_version            = var.rke2_version != "" ? var.rke2_version : ""
+  ssh_private_key_path    = "${path.cwd}/${var.prefix}-ssh_private_key.pem"
+  ssh_public_key_path     = "${path.cwd}/${var.prefix}-ssh_public_key.pem"
+  downstream_prefix       = "${var.prefix}-downstream"
+  downstream_rke2_version = var.rke2_version != "" ? var.rke2_version : data.external.upstream_rke2_version.result.version
+  tokens_list             = [for i in sort(keys(data.external.obtain_registration_token)) : data.external.obtain_registration_token[i].result.token]
 }
 
 resource "tls_private_key" "ssh_private_key" {
@@ -28,12 +31,12 @@ resource "digitalocean_ssh_key" "do_pub_created_ssh" {
 
 
 resource "digitalocean_droplet" "nodes" {
-  count  = var.droplet_count
-  name   = "node-${var.prefix}-${count.index + 1}"
-  tags = ["user:${var.prefix}"]
-  region = var.region
-  size   = var.size
-  image  = "ubuntu-24-04-x64"
+  count    = var.droplet_count
+  name     = "node-${var.prefix}-${count.index + 1}"
+  tags     = ["user:${var.prefix}"]
+  region   = var.region
+  size     = var.size
+  image    = "ubuntu-24-04-x64"
   ssh_keys = [digitalocean_ssh_key.do_pub_created_ssh.id]
   connection {
     type        = "ssh"
@@ -47,12 +50,12 @@ resource "digitalocean_droplet" "nodes" {
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
-    ] : count.index < 3 ? [
+      ] : count.index < 3 ? [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
-    ] : [
+      ] : [
       "mkdir -p /etc/rancher/rke2",
       "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=\"agent\" INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
@@ -61,7 +64,7 @@ resource "digitalocean_droplet" "nodes" {
   }
 }
 
-resource "null_resource" "rke2_nginx_ingress_config"{
+resource "null_resource" "rke2_nginx_ingress_config" {
   depends_on = [digitalocean_droplet.nodes]
   connection {
     type        = "ssh"
@@ -80,34 +83,34 @@ resource "digitalocean_loadbalancer" "rke2_lb" {
   region = var.region
 
   forwarding_rule {
-    entry_port     = 80
-    entry_protocol = "http"
-    target_port    = 80
+    entry_port      = 80
+    entry_protocol  = "http"
+    target_port     = 80
     target_protocol = "http"
     tls_passthrough = false
   }
 
   forwarding_rule {
-    entry_port     = 443
-    entry_protocol = "https"
-    target_port    = 443
+    entry_port      = 443
+    entry_protocol  = "https"
+    target_port     = 443
     target_protocol = "https"
     tls_passthrough = true
   }
 
   healthcheck {
-    protocol               = "https"
-    port                   = 443
-    path                   = "/healthz"
-    check_interval_seconds = 5
+    protocol                 = "https"
+    port                     = 443
+    path                     = "/healthz"
+    check_interval_seconds   = 5
     response_timeout_seconds = 10
-    healthy_threshold      = 3
-    unhealthy_threshold    = 3
+    healthy_threshold        = 3
+    unhealthy_threshold      = 3
   }
 
   droplet_ids = digitalocean_droplet.nodes.*.id
 
-  redirect_http_to_https = true
+  redirect_http_to_https   = true
   enable_backend_keepalive = false
 }
 
@@ -123,7 +126,7 @@ resource "null_resource" "modify_kubeconfig" {
 }
 
 resource "null_resource" "longhorn_dependency" {
-  count = var.longhorn_install ? var.droplet_count : 0
+  count      = var.longhorn_install ? var.droplet_count : 0
   depends_on = [digitalocean_loadbalancer.rke2_lb]
   provisioner "remote-exec" {
     inline = [
@@ -159,14 +162,14 @@ resource "null_resource" "wait_for_kubernetes" {
 }
 
 resource "helm_release" "longhorn" {
-  count      = var.longhorn_install ? 1 : 0
+  count            = var.longhorn_install ? 1 : 0
   name             = "longhorn"
   chart            = "longhorn"
   namespace        = "longhorn-system"
   repository       = "https://charts.longhorn.io"
-  version = var.longhorn_version != "" ? var.longhorn_version : null
+  version          = var.longhorn_version != "" ? var.longhorn_version : null
   create_namespace = true
-  depends_on = [null_resource.wait_for_kubernetes]
+  depends_on       = [null_resource.wait_for_kubernetes]
   values = [
     <<EOF
 defaultSettings:
@@ -177,12 +180,12 @@ EOF
 
 
 resource "helm_release" "cert-manager" {
-  name       = "jetstack"
-  chart      = "cert-manager"
-  namespace  = "cert-manager"
-  repository = "https://charts.jetstack.io"
+  name             = "jetstack"
+  chart            = "cert-manager"
+  namespace        = "cert-manager"
+  repository       = "https://charts.jetstack.io"
   create_namespace = true
-  depends_on = [null_resource.wait_for_kubernetes]
+  depends_on       = [null_resource.wait_for_kubernetes]
   values = [
     <<EOF
 crds:
@@ -192,13 +195,13 @@ EOF
 }
 
 resource "helm_release" "rancher" {
-  name       = "rancher"
-  chart      = "rancher"
-  namespace  = "cattle-system"
-  repository = "https://charts.rancher.com/server-charts/prime"
-  version = var.rancher_version != "" ? var.rancher_version : null
+  name             = "rancher"
+  chart            = "rancher"
+  namespace        = "cattle-system"
+  repository       = "https://charts.rancher.com/server-charts/prime"
+  version          = var.rancher_version != "" ? var.rancher_version : null
   create_namespace = true
-  depends_on = [helm_release.cert-manager]
+  depends_on       = [helm_release.cert-manager]
   values = [
     <<EOF
 hostname: rancher.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io
@@ -241,14 +244,14 @@ resource "null_resource" "create_cluster_issuer" {
 }
 
 resource "helm_release" "neuvector-core" {
-  count      = var.neuvector_install ? 1 : 0
-  name       = "neuvector"
-  chart      = "core"
-  namespace  = "neuvector"
-  repository = "https://neuvector.github.io/neuvector-helm/"
-  version = var.neuvector_version != "" ? var.neuvector_version : null
+  count            = var.neuvector_install ? 1 : 0
+  name             = "neuvector"
+  chart            = "core"
+  namespace        = "neuvector"
+  repository       = "https://neuvector.github.io/neuvector-helm/"
+  version          = var.neuvector_version != "" ? var.neuvector_version : null
   create_namespace = true
-  depends_on = [null_resource.create_cluster_issuer]
+  depends_on       = [null_resource.create_cluster_issuer]
   values = [
     <<EOF
 controller:
@@ -286,16 +289,16 @@ EOF
 }
 
 resource "local_file" "observability_ingress_values" {
-  count = var.longhorn_install && var.stackstate_install && var.stackstate_license != null ? 1 : 0
+  count      = var.longhorn_install && var.stackstate_install && var.stackstate_license != null ? 1 : 0
   depends_on = [null_resource.create_cluster_issuer]
   content = templatefile("${path.cwd}/suse-observability-values/templates/ingress_values.tpl", {
-    baseUrl         = "observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io"
+    baseUrl = "observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io"
   })
   filename = "${path.cwd}/suse-observability-values/templates/ingress_values.yaml"
 }
 
 resource "null_resource" "suse_observability_template" {
-  count = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
+  count      = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
   depends_on = [null_resource.create_cluster_issuer]
   provisioner "local-exec" {
     command = <<EOT
@@ -307,11 +310,158 @@ resource "null_resource" "suse_observability_template" {
 }
 
 data "external" "suse_observability_password" {
-  count = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
+  count      = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? 1 : 0
   depends_on = [null_resource.suse_observability_template]
   program = ["bash", "-c", <<EOT
     PASSWORD=$(cat suse-observability-values/templates/baseConfig_values.yaml | grep "Observability admin password" | awk '{print $8}')
     echo "{\"password\": \"$PASSWORD\"}"
   EOT
   ]
+}
+
+data "external" "upstream_rke2_version" {
+  depends_on = [null_resource.wait_for_kubernetes]
+  program = ["bash", "-c", <<EOT
+    export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+    RKE2_VERSION=$(kubectl version -o json | jq -r '.serverVersion.gitVersion')
+    echo "{\"version\": \"$RKE2_VERSION\"}"
+  EOT
+  ]
+}
+
+resource "null_resource" "create_downstream_cluster" {
+  count      = var.create_downstream_cluster ? 1 : 0
+  depends_on = [helm_release.rancher]
+  provisioner "local-exec" {
+    command = <<-EOT
+      export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      while ! kubectl  rollout status -w -n cattle-provisioning-capi-system deploy/capi-controller-manager &> /dev/null; do echo "Waiting for CAPI pods to be ready on upstream rancher cluster... .Retrying in 5s" && sleep 5s; done
+      kubectl apply -f - <<EOF
+      apiVersion: provisioning.cattle.io/v1
+      kind: Cluster
+      metadata:
+        name: ${local.downstream_prefix}
+        namespace: fleet-default
+      spec:
+        kubernetesVersion: ${local.downstream_rke2_version}
+        rkeConfig:
+          machineGlobalConfig:
+            cni: ${var.downstream_cni}
+      EOF
+    EOT
+  }
+}
+
+resource "null_resource" "create_downstream_registration_token" {
+  for_each   = var.create_downstream_cluster ? toset([for i in range(var.downstream_droplet_count) : tostring(i)]) : toset([])
+  depends_on = [null_resource.create_downstream_cluster]
+  provisioner "local-exec" {
+    command = <<-EOT
+      export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      CLUSTERID=$(kubectl get clusters.provisioning.cattle.io -n fleet-default -o json | jq -r '.items[] | select(.metadata.name == "${local.downstream_prefix}") | .status.clusterName')
+      kubectl apply -f - <<EOF
+      apiVersion: management.cattle.io/v3
+      kind: ClusterRegistrationToken
+      metadata:
+        name: ${local.downstream_prefix}-${each.key}
+        namespace: $CLUSTERID
+      spec:
+        clusterName: $CLUSTERID
+      EOF
+    EOT
+  }
+}
+
+data "external" "obtain_registration_token" {
+  for_each   = var.create_downstream_cluster ? toset([for i in range(var.downstream_droplet_count) : tostring(i)]) : toset([])
+  depends_on = [null_resource.create_downstream_registration_token]
+  program = ["bash", "-c", <<EOT
+    export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+    CLUSTERID=$(kubectl get clusters.provisioning.cattle.io -n fleet-default -o json | jq -r '.items[] | select(.metadata.name == "${local.downstream_prefix}") | .status.clusterName')
+    TOKEN_NAME=${local.downstream_prefix}-${each.key}
+    CLUSTERTOKEN=$(kubectl get clusterregistrationtokens.management.cattle.io -n $CLUSTERID $TOKEN_NAME -o jsonpath='{.status.token}')
+    echo "{\"token\": \"$CLUSTERTOKEN\"}"
+  EOT
+  ]
+}
+
+
+resource "digitalocean_droplet" "downstream_nodes" {
+  depends_on = [data.external.obtain_registration_token]
+  count      = var.create_downstream_cluster ? var.downstream_droplet_count : 0
+  name       = "node-${local.downstream_prefix}-${count.index + 1}"
+  tags       = ["user:${var.prefix}"]
+  region     = var.region
+  size       = var.downstream_size
+  image      = "ubuntu-24-04-x64"
+  ssh_keys   = [digitalocean_ssh_key.do_pub_created_ssh.id]
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = tls_private_key.ssh_private_key.private_key_openssh
+    host        = self.ipv4_address
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "curl -fL --insecure https://rancher.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io/system-agent-install.sh | sudo sh -s - --server https://rancher.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io --label 'cattle.io/os=linux' --token ${local.tokens_list[count.index]} --etcd --controlplane --worker",
+      "modprobe dm-crypt && systemctl stop multipathd  && systemctl disable multipathd && systemctl mask multipathd"
+    ]
+  }
+}
+
+resource "null_resource" "rke2_nginx_downstream_ingress_config" {
+  count      = var.create_downstream_cluster ? 1 : 0
+  depends_on = [digitalocean_droplet.downstream_nodes]
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = tls_private_key.ssh_private_key.private_key_openssh
+    host        = digitalocean_droplet.downstream_nodes[0].ipv4_address
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p /var/lib/rancher/rke2/server/manifests"
+    ]
+  }
+  provisioner "file" {
+    source      = "${path.cwd}/files/rke2-ingress-nginx-config.yaml"
+    destination = "/var/lib/rancher/rke2/server/manifests/rke2-ingress-nginx-config.yaml"
+  }
+}
+
+resource "digitalocean_loadbalancer" "downstream_rke2_lb" {
+  count  = var.create_downstream_cluster ? 1 : 0
+  name   = "loadbalancer-${local.downstream_prefix}"
+  region = var.region
+
+  forwarding_rule {
+    entry_port      = 80
+    entry_protocol  = "http"
+    target_port     = 80
+    target_protocol = "http"
+    tls_passthrough = false
+  }
+
+  forwarding_rule {
+    entry_port      = 443
+    entry_protocol  = "https"
+    target_port     = 443
+    target_protocol = "https"
+    tls_passthrough = true
+  }
+
+  healthcheck {
+    protocol                 = "https"
+    port                     = 443
+    path                     = "/healthz"
+    check_interval_seconds   = 5
+    response_timeout_seconds = 10
+    healthy_threshold        = 3
+    unhealthy_threshold      = 3
+  }
+
+  droplet_ids = digitalocean_droplet.downstream_nodes.*.id
+
+  redirect_http_to_https   = true
+  enable_backend_keepalive = false
 }

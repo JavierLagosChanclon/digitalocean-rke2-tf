@@ -15,3 +15,7 @@ rancher_password = ""
 # stackstate_install = true
 # stackstate_license = ""
 # stackstate_sizing = ""
+# create_downstream_cluster = true/false
+# downstream_droplet_count = 1
+# downstream_cni = ""
+# downstream_size = ""
