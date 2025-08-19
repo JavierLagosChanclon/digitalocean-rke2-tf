@@ -10,16 +10,21 @@ output "Rancher_password" {
 
 output "neuvector_url" {
   description = "WebUI to access NeuVector"
-  value = var.neuvector_install ? "https://neuvector.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io" : null
+  value       = var.neuvector_install ? "https://neuvector.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io" : null
 }
 
 
 output "SuseObservability_url" {
-  value = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? "https://observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io" : null
+  value       = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? "https://observability.${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io" : null
   description = "SuseObservability_url"
 }
 
 output "SuseObservability_password" {
-  value = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? data.external.suse_observability_password[0].result["password"] : null
+  value       = var.longhorn_install && var.stackstate_install && var.stackstate_license != "" ? data.external.suse_observability_password[0].result["password"] : null
   description = "SuseObservability_password"
+}
+
+output "downstream_loadbalancer_ip" {
+  value       = var.create_downstream_cluster ? digitalocean_loadbalancer.downstream_rke2_lb[0].ip : null
+  description = "downstream_loadbalancer_ip"
 }
