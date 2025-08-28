@@ -23,7 +23,6 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
     -  `size` To define Droplet size. The following link can be useful to select Droplet size. -> https://slugs.do-api.dev/
     -  `droplet_count` To specify the number of instances to create. First 3 nodes will be configured as master nodes while the rest will be workers.
     -  `prefix` To specify prefix defined in objects created on DigitalOcean.
-    -  `rke2_token` To specify RKE2 token required to configure nodes.
     -  `rancher_password` To configure the initial Admin rancher password (the password must be at least 12 characters).
 
 #### IMPORTANT INFORMATION
@@ -31,6 +30,7 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
 - The required variables explained before will help to create a RKE2 cluster by deploying only Rancher and Cert-manager components with valid HTTPS access. In case that you want leverage and use all the potential of the Terraform script you may want to use the rest of the variables:
   - Optional variables:
     - `rke2_version` To define rke2 version installed. By default it will install stable latest version available.
+    - `rke2_token` To specify RKE2 token required to configure nodes.
     - `kubeconfig_path` To specify where Kubeconfig file will be located to execute Kubectl commands to the cluster created. By default, it will be located at the current folder.
     - `longhorn_install` If longhorn_install variable is set to true Longhorn will be deployed and nodes will be configured for longhorn to work. By default, longhorn_install variable is set to false.
     - `neuvector_install` If neuvector_install variable is set to true NeuVector will be deployed and if longhorn_install is true Neuvector will be configured with persistent storage. By default, neuvector_install variable is set to false.
@@ -55,7 +55,7 @@ size = "s-8vcpu-16gb"
 droplet_count = 3
 prefix = "<your-name>-rke2"
 #rke2_version = ""
-rke2_token = "my-token-created"
+# rke2_token = "my-token-created"
 rancher_password = "<rancher-password>"
 # kubeconfig_path = ""
 # rancher_version = ""

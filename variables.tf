@@ -45,7 +45,7 @@ variable "rke2_version" {
 variable "rke2_token" {
   description = "Token used by RKE2 server configuration"
   type        = string
-  default     = null
+  default     = "my-shared-token"
   sensitive   = true
 }
 
