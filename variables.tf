@@ -36,6 +36,18 @@ variable "prefix" {
   default     = null
 }
 
+variable "use_digitalocean_domain" {
+  description = "Variable to define whether to use DigitalOcean custom domain or not. If set as false 'sslip.io' domain will be used"
+  type        = bool
+  default     = false
+}
+
+variable "digitalocean_domain" {
+  description = "Custom domain you already have on your account"
+  type        = string
+  default     = null
+}
+
 variable "rke2_version" {
   description = "RKE2 installed version"
   type        = string
@@ -58,7 +70,7 @@ variable "kubeconfig_path" {
 variable "rancher_password" {
   description = "Rancher password used to login with admin user in webUI"
   type        = string
-  default     = "admin"
+  default     = "myrancherpassword123*"
 }
 
 variable "rancher_version" {
@@ -73,14 +85,44 @@ variable "neuvector_install" {
   default     = false
 }
 
+variable "neuvector_downstream_install" {
+  description = "Define if NeuVector is installed or not on the downstream cluster"
+  type        = bool
+  default     = false
+}
+
 variable "neuvector_version" {
   description = "Neuvector helm chart version"
   type        = string
   default     = ""
 }
 
+variable "neuvector_downstream_version" {
+  description = "Neuvector helm chart version for downstream installation"
+  type        = string
+  default     = ""
+}
+
+variable "neuvector_external_ingress" {
+  description = "Define if external ingress is required or not (by default it will be accessible through Rancher UI)"
+  type        = bool
+  default     = false
+}
+
+variable "neuvector_downstream_external_ingress" {
+  description = "Define if external ingress is required or not (by default it will be accessible through Rancher UI)"
+  type        = bool
+  default     = false
+}
+
 variable "longhorn_install" {
   description = "Define if longhorn is installed or not"
+  type        = bool
+  default     = false
+}
+
+variable "longhorn_downstream_install" {
+  description = "Define if longhorn is installed or not on the downstream cluster"
   type        = bool
   default     = false
 }
@@ -91,7 +133,19 @@ variable "longhorn_version" {
   default     = ""
 }
 
+variable "longhorn_downstream_version" {
+  description = "Longhorn helm chart version for downstream installation"
+  type        = string
+  default     = ""
+}
+
 variable "stackstate_install" {
+  description = "Define if StackState is installed or not"
+  type        = bool
+  default     = false
+}
+
+variable "stackstate_downstream_install" {
   description = "Define if StackState is installed or not"
   type        = bool
   default     = false
@@ -99,6 +153,12 @@ variable "stackstate_install" {
 
 variable "stackstate_license" {
   description = "Stackstate license used to deploy Suse Observability"
+  type        = string
+  default     = ""
+}
+
+variable "stackstate_downstream_license" {
+  description = "Stackstate license used to deploy Suse Observability on downstream cluster"
   type        = string
   default     = ""
 }
@@ -111,6 +171,40 @@ variable "stackstate_sizing" {
     condition     = contains(["trial", "10-nonha", "20-nonha", "50-nonha", "100-nonha", "150-ha", "250-ha", "500-ha"], var.stackstate_sizing)
     error_message = "Please, specify a valid StackState size. Please see following URL https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements"
   }
+}
+
+variable "stackstate_downstream_sizing" {
+  description = "Stackstate size used to deploy Suse Observability on downstream cluster"
+  type        = string
+  default     = "trial"
+  validation {
+    condition     = contains(["trial", "10-nonha", "20-nonha", "50-nonha", "100-nonha", "150-ha", "250-ha", "500-ha"], var.stackstate_downstream_sizing)
+    error_message = "Please, specify a valid StackState size. Please see following URL https://docs.stackstate.com/self-hosted-setup/install-stackstate/requirements"
+  }
+}
+
+variable "stackstate_rancher_oidc" {
+  description = "Defined if rancher will be used as OIDC provider on SUSE Observability"
+  type        = bool
+  default     = false
+}
+
+variable "stackstate_downstream_rancher_oidc" {
+  description = "Defined if rancher will be used as OIDC provider on SUSE Observability deployed on downstream cluster"
+  type        = bool
+  default     = false
+}
+
+variable "stackstate_create_oltp_ingress" {
+  description = "Defined whether OLTP stackstate ingress are required to be deployed or not"
+  type        = bool
+  default     = false
+}
+
+variable "stackstate_downstream_create_oltp_ingress" {
+  description = "Defined whether OLTP stackstate ingress are required to be deployed or not on the downstream cluster"
+  type        = bool
+  default     = false
 }
 
 variable "create_downstream_cluster" {

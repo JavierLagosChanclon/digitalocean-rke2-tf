@@ -11,7 +11,7 @@ ingress:
       secretName: tls-secret
 opentelemetry-collector:
   ingress:
-    enabled: true
+    enabled: ${stackstate_otlp}
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/proxy-body-size: "50m"
