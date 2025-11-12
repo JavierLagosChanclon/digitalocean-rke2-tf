@@ -10,7 +10,7 @@ output "Rancher_password" {
 
 output "neuvector_url" {
   description = "WebUI to access NeuVector"
-  value       = var.neuvector_install && var.neuvector_external_ingress ? "https://neuvector.${local.domain_url}" : "Neuvector has been deployed and can be accessed through Rancher UI"
+  value       = var.neuvector_install ? (var.neuvector_external_ingress ? "https://neuvector.${local.domain_url}" : "Neuvector has been deployed and can be accessed through Rancher UI"): null
 }
 
 
@@ -31,7 +31,7 @@ output "downstream_loadbalancer_ip" {
 
 output "neuvector_downstream_url" {
   description = "WebUI to access NeuVector on downstream cluster"
-  value       = var.neuvector_downstream_install && var.neuvector_downstream_external_ingress ? "https://neuvector.${local.domain_downstream_url}" : "Neuvector has been deployed and can be accessed through Rancher UI"
+  value       = var.neuvector_downstream_install ? (var.neuvector_downstream_external_ingress ? "https://neuvector.${local.domain_downstream_url}" : "Neuvector has been deployed and can be accessed through Rancher UI" ) : null
 }
 
 
