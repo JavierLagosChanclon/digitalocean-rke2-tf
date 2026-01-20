@@ -3,6 +3,7 @@ locals {
   domain_url              = var.use_digitalocean_domain ? "${var.prefix}-upstream-${random_string.prefix.result}.${var.digitalocean_domain}" : "${digitalocean_loadbalancer.rke2_lb.ip}.sslip.io"
   domain_downstream_url   = var.create_downstream_cluster ? (var.use_digitalocean_domain ? "${var.prefix}-downstream-${random_string.prefix.result}.${var.digitalocean_domain}" : "${digitalocean_loadbalancer.downstream_rke2_lb[0].ip}.sslip.io") : null
   rke2_version            = var.rke2_version != "" ? var.rke2_version : ""
+  rke2_ingress            = var.rke2_ingress == "traefik" ? "traefik" : "ingress-${var.rke2_ingress}"
   ssh_private_key_path    = "${path.cwd}/${var.prefix}-ssh_private_key.pem"
   ssh_public_key_path     = "${path.cwd}/${var.prefix}-ssh_public_key.pem"
   downstream_prefix       = "${var.prefix}-downstream"
@@ -55,17 +56,17 @@ resource "digitalocean_droplet" "nodes" {
   provisioner "remote-exec" {
     inline = count.index == 0 ? [
       "mkdir -p /etc/rancher/rke2",
-      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml",
+      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'ingress-controller: ${local.rke2_ingress}' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
       ] : count.index < 3 ? [
       "mkdir -p /etc/rancher/rke2",
-      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
+      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml && echo 'ingress-controller: ${local.rke2_ingress}' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-server.service && systemctl start rke2-server.service"
       ] : [
       "mkdir -p /etc/rancher/rke2",
-      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml",
+      "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml && echo 'server: https://${digitalocean_droplet.nodes[0].ipv4_address}:9345' >> /etc/rancher/rke2/config.yaml && echo 'ingress-controller: ${local.rke2_ingress}' >> /etc/rancher/rke2/config.yaml",
       "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=\"agent\" INSTALL_RKE2_VERSION=${local.rke2_version} sh -",
       "systemctl enable rke2-agent.service && systemctl start rke2-agent.service"
     ]
@@ -74,6 +75,7 @@ resource "digitalocean_droplet" "nodes" {
 
 resource "null_resource" "rke2_nginx_ingress_config" {
   depends_on = [digitalocean_droplet.nodes]
+  count = var.rke2_ingress == "nginx" ? 1 : 0
   connection {
     type        = "ssh"
     user        = "root"
@@ -107,9 +109,9 @@ resource "digitalocean_loadbalancer" "rke2_lb" {
   }
 
   healthcheck {
-    protocol                 = "https"
+    protocol                 = var.rke2_ingress == "nginx" ? "https" : "tcp"
     port                     = 443
-    path                     = "/healthz"
+    path                     = var.rke2_ingress == "nginx" ? "/healthz" : null
     check_interval_seconds   = 5
     response_timeout_seconds = 10
     healthy_threshold        = 3
@@ -191,6 +193,7 @@ resource "helm_release" "longhorn" {
     <<EOF
 defaultSettings:
   deletingConfirmationFlag: true
+  storageOverProvisioningPercentage: 300
 EOF
   ]
 }
@@ -233,7 +236,7 @@ ingress:
     source: letsEncrypt
 letsEncrypt:
   ingress:
-    class: nginx
+    class: ${var.rke2_ingress}
 postDelete:
   enabled: false
 agentTLSMode: system-store
@@ -259,7 +262,7 @@ resource "null_resource" "create_cluster_issuer" {
           solvers:
           - http01:
               ingress:
-                class: nginx
+                class: ${var.rke2_ingress}
       EOF
     EOT
   }
@@ -304,6 +307,9 @@ cve:
 manager:
   svc:
     type: ClusterIP
+    annotations:
+      traefik.ingress.kubernetes.io/service.serversscheme: https
+      traefik.ingress.kubernetes.io/service.serverstransport: cattle-neuvector-system-neuvector@kubernetescrd
   ingress:
     enabled:  ${var.neuvector_external_ingress ? "true" : "false"}
     tls: true
@@ -314,6 +320,25 @@ manager:
     host: neuvector.${local.domain_url}
 EOF
   ]
+}
+
+resource "null_resource" "create_neuvector_traefik" {
+  depends_on = [helm_release.neuvector-core]
+  count = var.rke2_ingress == "traefik" && var.neuvector_install ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOT
+      export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      kubectl apply -f - <<EOF
+      apiVersion: traefik.io/v1alpha1
+      kind: ServersTransport
+      metadata:
+        name: neuvector
+        namespace: cattle-neuvector-system
+      spec:
+        insecureSkipVerify: true
+      EOF
+    EOT
+  }
 }
 
 resource "local_file" "observability_ingress_values" {
@@ -379,7 +404,7 @@ resource "null_resource" "suse_observability_template" {
     helm repo add suse-observability https://charts.rancher.com/server-charts/prime/suse-observability
     helm repo update
     helm template --set license='${var.stackstate_license}' --set baseUrl='https://observability.${local.domain_url}' --set rancherUrl='https://rancher.${local.domain_url}' --set sizing.profile='${var.stackstate_sizing}' suse-observability-values suse-observability/suse-observability-values --output-dir .
-    helm --kubeconfig ${local.kc_path}/${var.prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml ${var.stackstate_rancher_oidc ? "--values ${path.cwd}/suse-observability-values/templates/rancher-oidc.yaml" : ""} --create-namespace
+    helm --kubeconfig ${local.kc_path}/${var.prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml ${var.stackstate_rancher_oidc ? "--values ${path.cwd}/suse-observability-values/templates/rancher-oidc.yaml" : ""} ${var.rke2_ingress == "traefik" ? "--values ${path.cwd}/suse-observability-values/templates/otel-collector-values.yaml" : ""} --create-namespace
     EOT
   }
 }
@@ -410,7 +435,7 @@ resource "null_resource" "create_downstream_cluster" {
   provisioner "local-exec" {
     command = <<-EOT
       export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
-      while ! kubectl  rollout status -w -n cattle-provisioning-capi-system deploy/capi-controller-manager &> /dev/null; do echo "Waiting for CAPI pods to be ready on upstream rancher cluster... .Retrying in 5s" && sleep 5s; done
+      while true; do if kubectl rollout status -w -n cattle-capi-system deploy/capi-controller-manager &> /dev/null; then echo "CAPI pods are ready in cattle-capi-system" && break; elif kubectl rollout status -w -n cattle-provisioning-capi-system deploy/capi-controller-manager &> /dev/null; then echo "CAPI pods are ready in cattle-provisioning-capi-system" && break; else echo "Waiting for CAPI pods to be ready... Retrying in 5s" && sleep 5; fi; done && sleep 30s
       kubectl apply -f - <<EOF
       apiVersion: provisioning.cattle.io/v1
       kind: Cluster
@@ -596,6 +621,7 @@ resource "helm_release" "longhorn_downstream" {
     <<EOF
 defaultSettings:
   deletingConfirmationFlag: true
+  storageOverProvisioningPercentage: 300
 EOF
   ]
 }

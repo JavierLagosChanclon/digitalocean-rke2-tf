@@ -54,6 +54,17 @@ variable "rke2_version" {
   default     = ""
 }
 
+variable "rke2_ingress" {
+  description = "RKE2 ingress deployed (nginx or traefik)"
+  type        = string
+  default     = "nginx"
+
+  validation {
+    condition     = contains(["nginx", "traefik"], var.rke2_ingress)
+    error_message = "The ingress selected must be 'nginx' or 'traefik'."
+  }
+}
+
 variable "rke2_token" {
   description = "Token used by RKE2 server configuration"
   type        = string

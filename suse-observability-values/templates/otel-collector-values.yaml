@@ -1,0 +1,4 @@
+opentelemetry-collector:
+  service:
+    annotations:
+      traefik.ingress.kubernetes.io/service.serversscheme: h2c
