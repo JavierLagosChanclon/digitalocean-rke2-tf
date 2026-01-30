@@ -30,6 +30,7 @@ git clone https://github.com/JavierLagosChanclon/digitalocean-rke2-tf.git
 - The required variables explained before will help to create a RKE2 upstream cluster by deploying only Rancher and Cert-manager components with valid HTTPS access. In case that you want leverage and use all the potential of the Terraform script you may want to use the rest of the variables:
   - Optional variables:
     - `rke2_version` To define rke2 version installed. By default it will install stable latest version available.
+    - `rke2_ingress` To define rke2 ingress class created. By default _nginx_ is configured but _traefik_ can also be selected.
     - `kubeconfig_path` To specify where Kubeconfig file will be located to execute Kubectl commands to the cluster created. By default, it will be located at the current folder.
     - `use_digitalocean_domain` To specify whether we want to use a custom domain already created on the DO account or not. If set as false sslip.io domain will be used. Please be careful about sslip.io limitation with let's encrypt
     - `digitalocean_domain` To define the custom domain created on DigitalOcean account. Here is where some records will be created.
@@ -70,6 +71,7 @@ prefix = ""<your-name>-rke2"
 # rancher_password = ""
 # rke2_token = ""
 # rke2_version= ""
+# rke2_version = "nginx/traefik"
 use_digitalocean_domain = true
 digitalocean_domain = "domain.created.on.digitalOcean"
 # kubeconfig_path = ""
