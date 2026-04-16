@@ -357,6 +357,7 @@ resource "null_resource" "create_suse_observability_rancher_oidc" {
   provisioner "local-exec" {
     command = <<-EOT
       export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      kubectl patch feature oidc-provider --type merge -p '{"spec":{"value":true}}'
       until kubectl get crd oidcclients.management.cattle.io > /dev/null 2>&1 ; do echo "OIDCClient crd is not ready yet, sleeping 10s" && sleep 10s; done
       kubectl apply -f - <<EOF
       apiVersion: management.cattle.io/v3
@@ -378,6 +379,7 @@ data "external" "suse_observability_oidc_rancher" {
   depends_on = [null_resource.create_suse_observability_rancher_oidc]
   program = ["bash", "-c", <<EOT
     export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+    sleep 30s
     CLIENT_ID=$(kubectl get oidcclients.management.cattle.io oidc-observability -o jsonpath='{.status.clientID}')
     CLIENT_SECRET=$(kubectl get secret $CLIENT_ID -n cattle-oidc-client-secrets -o jsonpath='{.data.client-secret-1}' | base64 -d)
     echo "{\"client_id\": \"$CLIENT_ID\", \"client_secret\": \"$CLIENT_SECRET\"}"
@@ -447,6 +449,7 @@ resource "null_resource" "create_downstream_cluster" {
         rkeConfig:
           machineGlobalConfig:
             cni: ${var.downstream_cni}
+            ingress-controller: ${local.rke2_ingress}
       EOF
     EOT
   }
@@ -511,7 +514,7 @@ resource "digitalocean_droplet" "downstream_nodes" {
 }
 
 resource "null_resource" "rke2_nginx_downstream_ingress_config" {
-  count      = var.create_downstream_cluster ? 1 : 0
+  count      = var.create_downstream_cluster && var.rke2_ingress == "nginx" ? 1 : 0
   depends_on = [digitalocean_droplet.downstream_nodes]
   connection {
     type        = "ssh"
@@ -552,9 +555,9 @@ resource "digitalocean_loadbalancer" "downstream_rke2_lb" {
   }
 
   healthcheck {
-    protocol                 = "https"
+    protocol                 = var.rke2_ingress == "nginx" ? "https" : "tcp"
     port                     = 443
-    path                     = "/healthz"
+    path                     = var.rke2_ingress == "nginx" ? "/healthz" : null
     check_interval_seconds   = 5
     response_timeout_seconds = 10
     healthy_threshold        = 3
@@ -663,7 +666,7 @@ resource "null_resource" "create_downstream_cluster_issuer" {
           solvers:
           - http01:
               ingress:
-                class: nginx
+                class: ${var.rke2_ingress}
       EOF
     EOT
   }
@@ -708,6 +711,9 @@ cve:
 manager:
   svc:
     type: ClusterIP
+    annotations:
+      traefik.ingress.kubernetes.io/service.serversscheme: https
+      traefik.ingress.kubernetes.io/service.serverstransport: cattle-neuvector-system-neuvector@kubernetescrd
   ingress:
     enabled: ${var.neuvector_downstream_external_ingress ? "true" : "false"}
     tls: true
@@ -718,6 +724,25 @@ manager:
     host: neuvector.${local.domain_downstream_url}
 EOF
   ]
+}
+
+resource "null_resource" "create_neuvector_traefik_downstream" {
+  depends_on = [helm_release.neuvector-core_downstream]
+  count = var.rke2_ingress == "traefik" && var.neuvector_downstream_install ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOT
+      export KUBECONFIG=${local.kc_path}/${local.downstream_prefix}_kubeconfig.yaml
+      kubectl apply -f - <<EOF
+      apiVersion: traefik.io/v1alpha1
+      kind: ServersTransport
+      metadata:
+        name: neuvector
+        namespace: cattle-neuvector-system
+      spec:
+        insecureSkipVerify: true
+      EOF
+    EOT
+  }
 }
 
 resource "local_file" "observability_downstream_ingress_values" {
@@ -736,6 +761,7 @@ resource "null_resource" "create_suse_observability_downstream_rancher_oidc" {
   provisioner "local-exec" {
     command = <<-EOT
       export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
+      kubectl patch feature oidc-provider --type merge -p '{"spec":{"value":true}}'
       until kubectl get crd oidcclients.management.cattle.io > /dev/null 2>&1 ; do echo "OIDCClient crd is not ready yet, sleeping 10s" && sleep 10s; done
       kubectl apply -f - <<EOF
       apiVersion: management.cattle.io/v3
@@ -757,7 +783,7 @@ data "external" "suse_observability_downstream_oidc_rancher" {
   depends_on = [null_resource.create_suse_observability_downstream_rancher_oidc]
   program = ["bash", "-c", <<EOT
     export KUBECONFIG=${local.kc_path}/${var.prefix}_kubeconfig.yaml
-    sleep 5s
+    sleep 30s
     CLIENT_ID=$(kubectl get oidcclients.management.cattle.io oidc-observability-downstream -o jsonpath='{.status.clientID}')
     CLIENT_SECRET=$(kubectl get secret $CLIENT_ID -n cattle-oidc-client-secrets -o jsonpath='{.data.client-secret-1}' | base64 -d)
     echo "{\"client_id\": \"$CLIENT_ID\", \"client_secret\": \"$CLIENT_SECRET\"}"
@@ -784,7 +810,7 @@ resource "null_resource" "suse_observability_downstream_template" {
     helm repo add suse-observability https://charts.rancher.com/server-charts/prime/suse-observability
     helm repo update
     helm template --set license='${var.stackstate_downstream_license}' --set baseUrl='https://observability.${local.domain_downstream_url}' --set rancherUrl='https://rancher.${local.domain_url}' --set sizing.profile='${var.stackstate_downstream_sizing}' suse-observability-values suse-observability/suse-observability-values --output-dir .
-    helm --kubeconfig ${local.kc_path}/${local.downstream_prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml ${var.stackstate_downstream_rancher_oidc ? "--values ${path.cwd}/suse-observability-values/templates/rancher-oidc.yaml" : ""} --create-namespace
+    helm --kubeconfig ${local.kc_path}/${local.downstream_prefix}_kubeconfig.yaml upgrade --install suse-observability suse-observability/suse-observability --namespace suse-observability --values ${path.cwd}/suse-observability-values/templates/baseConfig_values.yaml --values ${path.cwd}/suse-observability-values/templates/sizing_values.yaml --values ${path.cwd}/suse-observability-values/templates/ingress_values.yaml ${var.stackstate_downstream_rancher_oidc ? "--values ${path.cwd}/suse-observability-values/templates/rancher-oidc.yaml" : ""} ${var.rke2_ingress == "traefik" ? "--values ${path.cwd}/suse-observability-values/templates/otel-collector-values.yaml" : ""} --create-namespace
     EOT
   }
 }
