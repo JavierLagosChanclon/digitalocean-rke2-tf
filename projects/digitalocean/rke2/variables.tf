@@ -1,0 +1,128 @@
+variable "prefix" {
+  description = "Specifies the prefix added to the names of all resources. Default is 'do-tf'."
+  type        = string
+  default     = "do-tf"
+}
+
+variable "do_token" {
+  description = "DigitalOcean API token used to deploy the infrastructure. Default is 'null'."
+  type        = string
+  default     = null
+}
+
+variable "region" {
+  description = "Specifies the DigitalOcean region used for all resources. Default is 'fra1'."
+  type        = string
+  default     = "fra1"
+  validation {
+    condition = contains([
+      "nyc1",
+      "nyc2",
+      "nyc3",
+      "ams3",
+      "sfo2",
+      "sfo3",
+      "sgp1",
+      "lon1",
+      "fra1",
+      "tor1",
+      "blr1",
+      "syd1"
+    ], var.region)
+    error_message = "Invalid Region specified."
+  }
+}
+
+variable "do_ssh_key_id" {
+  description = "Existing SSH key ID to use. If null, module will use or create one."
+  type        = string
+  default     = null
+}
+
+variable "instance_count" {
+  description = "Specifies the number of Droplets (nodes) to create for the RKE2 cluster. This value defines the total cluster size, including the first server node, additional server nodes (if count <= 3), and worker nodes (if count > 3). Default is 1."
+  type        = number
+  default     = 1
+  validation {
+    condition     = var.instance_count == 1 || var.instance_count >= 3
+    error_message = "instance_count must be either 1 (single-node cluster) or >= 3 (multi-node RKE2 cluster)."
+  }
+}
+
+variable "instance_type" {
+  description = "Specifies the name of the DigitalOcean Droplet type. Default is 'g-16vcpu-64gb'."
+  type        = string
+  default     = "g-16vcpu-64gb"
+}
+
+variable "data_disk_count" {
+  description = "Specifies the number of additional data disks to attach to each VM instance. Default is 1."
+  type        = number
+  default     = 1
+}
+
+variable "data_disk_size" {
+  description = "Specifies the size of each additional data disks attached to the Droplet, in GB. Default is '350'."
+  type        = number
+  default     = 350
+}
+
+variable "image_id" {
+  description = "Specifies the ID of the custom OS image used to provision all RKE2 cluster droplets. Defailt is empty."
+  type        = string
+  default     = ""
+}
+
+variable "user_data" {
+  description = "Specifies cloud-init user_data used to bootstrap the Droplet. Default is 'null'."
+  type        = string
+  default     = null
+}
+
+variable "node_role" {
+  description = "Specifies the RKE2 node role for this instance. Valid values are 'server' or 'agent'. The role determines whether the node participates in the control plane/etcd cluster ('server') or joins as a worker node ('agent'). Default is 'agent'."
+  type        = string
+  default     = "agent"
+  validation {
+    condition     = contains(["server", "agent"], var.node_role)
+    error_message = "Invalid node_role. Allowed values are 'server' or 'agent'."
+  }
+}
+
+variable "rke2_token" {
+  description = "Specifies the shared token used by all nodes to join the RKE2 cluster. Default is 'null'."
+  type        = string
+  default     = null
+}
+
+variable "rke2_version" {
+  description = "Specifies the RKE2 version to install. Default is 'v1.35.4+rke2r1'."
+  type        = string
+  default     = "v1.35.4+rke2r1"
+  validation {
+    condition     = can(regex("^v.*$", var.rke2_version))
+    error_message = "The RKE2 version must start with 'v'."
+  }
+}
+
+variable "server_url" {
+  description = "Specifies the URL of the first RKE2 server node (required for 'server' and 'agent' roles). Default is 'null'."
+  type        = string
+  default     = null
+}
+
+variable "rke2_config" {
+  description = "Specifies additional custom RKE2 configuration in YAML format. Default is empty."
+  type        = string
+  default     = ""
+}
+
+variable "rke2_ingress" {
+  description = "Specifies the ingress controller to deploy. Allowed values are 'traefik', 'nginx', or 'none'. Default is 'traefik'."
+  type        = string
+  default     = "traefik"
+  validation {
+    condition     = contains(["traefik", "nginx", "none"], var.rke2_ingress)
+    error_message = "Invalid ingress controller. Allowed values are 'traefik', 'nginx', or 'none'."
+  }
+}

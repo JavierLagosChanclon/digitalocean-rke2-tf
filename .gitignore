@@ -17,6 +17,12 @@ suse-observability-values/templates/baseConfig_values.yaml
 suse-observability-values/templates/sizing_values.yaml
 suse-observability-values/templates/ingress_values.yaml
 
+# Ignore generated OS images to avoid committing large build artifacts
+**/*.iso
+**/*.vhd
+**/*.qcow2.bz2
+**/*.tar.gz
+
 # Temporary files
 **/*.swp
 .DS_Store

@@ -1,0 +1,47 @@
+## -- Specifies the prefix added to the names of all resources.
+prefix = "do-rke2"
+
+## -- DigitalOcean API token used to deploy the infrastructure.
+do_token = null
+
+## -- Specifies the DigitalOcean region used for all resources.
+region = "fra1"
+
+## -- Existing SSH key ID to use. If null, module will use or create one.
+do_ssh_key_id = null
+
+## -- Specifies the number of Droplets (nodes) to create for the RKE2 cluster.
+instance_count = 1
+
+## -- Specifies the name of the DigitalOcean Droplet type.
+instance_type = "g-16vcpu-64gb"
+
+## -- Specifies the number of additional data disks to attach to each VM instance.
+data_disk_count = 1
+
+## -- Specifies the size of each additional data disks attached to the Droplet, in GB.
+data_disk_size = 350
+
+## -- Specifies the ID of the custom OS image used to provision all RKE2 cluster droplets.
+image_id = ""
+
+## -- Specifies cloud-init user_data used to bootstrap the Droplet.
+user_data = null
+
+## -- Specifies the RKE2 node role for this instance.
+node_role = "agent"
+
+## -- Specifies the shared token used by all nodes to join the RKE2 cluster.
+rke2_token = "SecretToken.123"
+
+## -- Specifies the RKE2 version to install.
+rke2_version = "v1.35.4+rke2r1"
+
+## -- Specifies the URL of the first RKE2 server node.
+server_url = null
+
+## -- Specifies additional custom RKE2 configuration in YAML format.
+rke2_config = ""
+
+## -- Specifies the ingress controller to deploy.
+rke2_ingress = "traefik"
