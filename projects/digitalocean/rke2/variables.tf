@@ -126,3 +126,21 @@ variable "rke2_ingress" {
     error_message = "Invalid ingress controller. Allowed values are 'traefik', 'nginx', or 'none'."
   }
 }
+
+variable "certmanager_version" {
+  description = "Cert-manager Helm chart version. If empty, latest version will be installed. Default is null (latest version)."
+  type        = string
+  default     = null
+}
+
+variable "longhorn_enabled" {
+  description = "Specifies whether Longhorn should be installed on the Kubernetes cluster. Default is false."
+  type        = bool
+  default     = false
+}
+
+variable "longhorn_version" {
+  description = "Specifies the Longhorn Helm chart version to install. Default is null (latest version)."
+  type        = string
+  default     = null
+}

@@ -7,14 +7,14 @@ locals {
   ssh_private_key_path = "${path.cwd}/${var.prefix}-ssh_private_key.pem"
   ssh_public_key_path  = "${path.cwd}/${var.prefix}-ssh_public_key.pem"
   ssh_username         = "opensuse"
-  kubeconfig_file      = "${path.cwd}/${var.prefix}_kube_config.yml"
+  kubeconfig_file      = "${path.cwd}/${var.prefix}_kubeconfig.yml"
   instance_type        = var.instance_type
   rke2_token           = random_string.rke2_token.result
   first_server_url     = "https://${module.rke2_first_server.instances_public_ip[0]}:9345"
-  server_count = var.instance_count < 3 ? var.instance_count : 3
-  server_nodes = var.instance_count == 1 ? [] : [for i in range(2, local.server_count + 1) : tostring(i)]
-  worker_count = var.instance_count > 3 ? var.instance_count - 3 : 0
-  worker_nodes = [for i in range(1, local.worker_count + 1) : tostring(i)]
+  server_count         = var.instance_count < 3 ? var.instance_count : 3
+  server_nodes         = var.instance_count == 1 ? [] : [for i in range(2, local.server_count + 1) : tostring(i)]
+  worker_count         = var.instance_count > 3 ? var.instance_count - 3 : 0
+  worker_nodes         = [for i in range(1, local.worker_count + 1) : tostring(i)]
 }
 
 module "identity" {
@@ -114,18 +114,38 @@ resource "ssh_resource" "retrieve_kubeconfig" {
   private_key = data.local_file.ssh_private_key.content
 }
 
-resource "local_file" "kube_config_yaml" {
+resource "local_file" "kubeconfig_yaml" {
   filename        = local.kubeconfig_file
   content         = ssh_resource.retrieve_kubeconfig.result
   file_permission = "0600"
 }
 
 provider "kubernetes" {
-  config_path = local_file.kube_config_yaml.filename
+  config_path = local_file.kubeconfig_yaml.filename
 }
 
 provider "helm" {
-  kubernetes {
-    config_path = local_file.kube_config_yaml.filename
+  kubernetes = {
+    config_path = local_file.kubeconfig_yaml.filename
   }
+}
+
+module "cert_manager" {
+  source              = "../../../modules/distribution/cert-manager"
+  depends_on          = [module.rke2_first_server]
+  certmanager_version = var.certmanager_version
+  kubeconfig_path     = local_file.kubeconfig_yaml.filename
+}
+
+module "longhorn" {
+  source           = "../../../modules/distribution/longhorn"
+  depends_on       = [module.rke2_first_server, module.cert_manager]
+  longhorn_enabled = var.longhorn_enabled
+  longhorn_host    = "longhorn.${module.rke2_first_server.instances_public_ip[0]}.sslip.io"
+  ssh_private_key  = data.local_file.ssh_private_key.content
+  node_ips = concat(
+    [module.rke2_first_server.instances_public_ip[0]],
+    flatten([for m in module.rke2_servers : m.instances_public_ip]),
+    flatten([for m in module.rke2_workers : m.instances_public_ip])
+  )
 }

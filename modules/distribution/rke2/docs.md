@@ -4,9 +4,7 @@ No requirements.
 
 ## Providers
 
-| Name | Version |
-|------|---------|
-| <a name="provider_random"></a> [random](#provider\_random) | n/a |
+No providers.
 
 ## Modules
 
@@ -14,15 +12,13 @@ No modules.
 
 ## Resources
 
-| Name | Type |
-|------|------|
-| [random_string.rke2_token](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
+No resources.
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_instance_count"></a> [instance\_count](#input\_instance\_count) | Specifies the number of nodes expected in the RKE2 cluster topology. Must be either 1 for a single-node cluster or >= 3 for a highly available cluster. Default is '1'. | `number` | `1` | no |
+| <a name="input_node_role"></a> [node\_role](#input\_node\_role) | Specifies the RKE2 node role for this instance. Valid values are 'server' or 'agent'. The role determines whether the node participates in the control plane/etcd cluster ('server') or joins as a worker node ('agent'). Default is 'agent'. | `string` | `"agent"` | no |
 | <a name="input_rke2_config"></a> [rke2\_config](#input\_rke2\_config) | Specifies additional custom RKE2 configuration in YAML format. Default is empty. | `string` | `""` | no |
 | <a name="input_rke2_ingress"></a> [rke2\_ingress](#input\_rke2\_ingress) | Specifies the ingress controller to deploy. Allowed values are 'traefik', 'nginx', or 'none'. Default is 'traefik'. | `string` | `"traefik"` | no |
 | <a name="input_rke2_token"></a> [rke2\_token](#input\_rke2\_token) | Specifies the shared token used by all nodes to join the RKE2 cluster. Default is 'null'. | `string` | `null` | no |

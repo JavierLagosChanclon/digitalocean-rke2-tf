@@ -45,3 +45,12 @@ rke2_config = ""
 
 ## -- Specifies the ingress controller to deploy.
 rke2_ingress = "traefik"
+
+## -- Cert-manager Helm chart version. If empty, latest version will be installed.
+certmanager_version = null
+
+## -- Specifies whether Longhorn should be installed on the Kubernetes cluster.
+longhorn_enabled = false
+
+## -- Specifies the Longhorn Helm chart version to install.
+longhorn_version = null
