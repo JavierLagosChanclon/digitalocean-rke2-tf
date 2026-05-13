@@ -8,8 +8,10 @@ crash.log
 
 # Files that may contain secrets
 terraform.tfvars
+*kube_config.yaml*
 *kube_config.yml*
 *kubeconfig.yaml*
+*kubeconfig.yml*
 *-ssh_private_key.pem*
 *-ssh_public_key.pem*
 suse-observability-values/templates/affinity_values.yaml

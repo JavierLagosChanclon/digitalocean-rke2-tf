@@ -37,16 +37,15 @@ module "rke2_first" {
 }
 
 module "rke2_first_server" {
-  source          = "../../../modules/infrastructure/digitalocean/droplet"
-  prefix          = "${var.prefix}-server-1"
-  region          = var.region
-  ssh_key_id      = module.identity.ssh_key_id
-  instance_type   = local.instance_type
-  data_disk_count = var.data_disk_count
-  data_disk_size  = var.data_disk_size
-  image_id        = module.os_image.image_id
-  instance_count  = 1
-  user_data       = module.rke2_first.user_data
+  source         = "../../../modules/infrastructure/digitalocean/droplet"
+  prefix         = "${var.prefix}-server-1"
+  region         = var.region
+  ssh_key_id     = module.identity.ssh_key_id
+  instance_type  = local.instance_type
+  data_disk_size = var.data_disk_size
+  image_id       = module.os_image.image_id
+  instance_count = 1
+  user_data      = module.rke2_first.user_data
 }
 
 module "rke2_additional_servers" {
@@ -59,17 +58,16 @@ module "rke2_additional_servers" {
 }
 
 module "rke2_servers" {
-  for_each        = toset(local.server_nodes)
-  source          = "../../../modules/infrastructure/digitalocean/droplet"
-  prefix          = "${var.prefix}-server-${each.value}"
-  region          = var.region
-  ssh_key_id      = module.identity.ssh_key_id
-  instance_type   = local.instance_type
-  data_disk_count = var.data_disk_count
-  data_disk_size  = var.data_disk_size
-  image_id        = module.os_image.image_id
-  instance_count  = 1
-  user_data       = module.rke2_additional_servers.user_data
+  for_each       = toset(local.server_nodes)
+  source         = "../../../modules/infrastructure/digitalocean/droplet"
+  prefix         = "${var.prefix}-server-${each.value}"
+  region         = var.region
+  ssh_key_id     = module.identity.ssh_key_id
+  instance_type  = local.instance_type
+  data_disk_size = var.data_disk_size
+  image_id       = module.os_image.image_id
+  instance_count = 1
+  user_data      = module.rke2_additional_servers.user_data
 }
 
 module "rke2_additional_workers" {
@@ -82,17 +80,16 @@ module "rke2_additional_workers" {
 }
 
 module "rke2_workers" {
-  for_each        = toset(local.worker_nodes)
-  source          = "../../../modules/infrastructure/digitalocean/droplet"
-  prefix          = "${var.prefix}-worker-${each.value}"
-  region          = var.region
-  ssh_key_id      = module.identity.ssh_key_id
-  instance_type   = local.instance_type
-  data_disk_count = var.data_disk_count
-  data_disk_size  = var.data_disk_size
-  image_id        = module.os_image.image_id
-  instance_count  = 1
-  user_data       = module.rke2_additional_workers.user_data
+  for_each       = toset(local.worker_nodes)
+  source         = "../../../modules/infrastructure/digitalocean/droplet"
+  prefix         = "${var.prefix}-worker-${each.value}"
+  region         = var.region
+  ssh_key_id     = module.identity.ssh_key_id
+  instance_type  = local.instance_type
+  data_disk_size = var.data_disk_size
+  image_id       = module.os_image.image_id
+  instance_count = 1
+  user_data      = module.rke2_additional_workers.user_data
 }
 
 data "local_file" "ssh_private_key" {
