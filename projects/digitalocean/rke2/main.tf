@@ -149,3 +149,12 @@ module "longhorn" {
     flatten([for m in module.rke2_workers : m.instances_public_ip])
   )
 }
+
+module "rancher" {
+  source                     = "../../../modules/distribution/rancher"
+  depends_on                 = [module.cert_manager]
+  rancher_enabled            = var.rancher_enabled
+  rancher_version            = var.rancher_version
+  rancher_hostname           = "rancher.${module.rke2_first_server.instances_public_ip[0]}.sslip.io"
+  rancher_bootstrap_password = var.rancher_bootstrap_password
+}

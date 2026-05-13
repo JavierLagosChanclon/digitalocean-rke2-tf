@@ -25,6 +25,7 @@
 | <a name="module_identity"></a> [identity](#module\_identity) | ../../../modules/identity/ssh | n/a |
 | <a name="module_longhorn"></a> [longhorn](#module\_longhorn) | ../../../modules/distribution/longhorn | n/a |
 | <a name="module_os_image"></a> [os\_image](#module\_os\_image) | ../../../modules/custom-os-image | n/a |
+| <a name="module_rancher"></a> [rancher](#module\_rancher) | ../../../modules/distribution/rancher | n/a |
 | <a name="module_rke2_additional_servers"></a> [rke2\_additional\_servers](#module\_rke2\_additional\_servers) | ../../../modules/distribution/rke2 | n/a |
 | <a name="module_rke2_additional_workers"></a> [rke2\_additional\_workers](#module\_rke2\_additional\_workers) | ../../../modules/distribution/rke2 | n/a |
 | <a name="module_rke2_first"></a> [rke2\_first](#module\_rke2\_first) | ../../../modules/distribution/rke2 | n/a |
@@ -57,6 +58,10 @@
 | <a name="input_longhorn_version"></a> [longhorn\_version](#input\_longhorn\_version) | Specifies the Longhorn Helm chart version to install. Default is null (latest version). | `string` | `null` | no |
 | <a name="input_node_role"></a> [node\_role](#input\_node\_role) | Specifies the RKE2 node role for this instance. Valid values are 'server' or 'agent'. The role determines whether the node participates in the control plane/etcd cluster ('server') or joins as a worker node ('agent'). Default is 'agent'. | `string` | `"agent"` | no |
 | <a name="input_prefix"></a> [prefix](#input\_prefix) | Specifies the prefix added to the names of all resources. Default is 'do-tf'. | `string` | `"do-tf"` | no |
+| <a name="input_rancher_bootstrap_password"></a> [rancher\_bootstrap\_password](#input\_rancher\_bootstrap\_password) | Specifies the bootstrap administrator password used during Rancher installation. Password must contain at least 12 characters. Default is 'SecretPassword.123'. | `string` | `"SecretPassword.123"` | no |
+| <a name="input_rancher_enabled"></a> [rancher\_enabled](#input\_rancher\_enabled) | Specifies whether Rancher should be installed on the Kubernetes cluster. Default is false. | `bool` | `false` | no |
+| <a name="input_rancher_tls_source"></a> [rancher\_tls\_source](#input\_rancher\_tls\_source) | Specifies the TLS certificate source used by Rancher. Default is 'letsEncrypt'. | `string` | `"letsEncrypt"` | no |
+| <a name="input_rancher_version"></a> [rancher\_version](#input\_rancher\_version) | Specifies the Rancher Helm chart version to install. Default is null (latest version). | `string` | `null` | no |
 | <a name="input_region"></a> [region](#input\_region) | Specifies the DigitalOcean region used for all resources. Default is 'fra1'. | `string` | `"fra1"` | no |
 | <a name="input_rke2_config"></a> [rke2\_config](#input\_rke2\_config) | Specifies additional custom RKE2 configuration in YAML format. Default is empty. | `string` | `""` | no |
 | <a name="input_rke2_ingress"></a> [rke2\_ingress](#input\_rke2\_ingress) | Specifies the ingress controller to deploy. Allowed values are 'traefik', 'nginx', or 'none'. Default is 'traefik'. | `string` | `"traefik"` | no |

@@ -16,10 +16,7 @@ instance_count = 1
 ## -- Specifies the name of the DigitalOcean Droplet type.
 instance_type = "g-16vcpu-64gb"
 
-## -- Specifies the number of additional data disks to attach to each VM instance.
-data_disk_count = 1
-
-## -- Specifies the size of each additional data disks attached to the Droplet, in GB.
+## -- Specifies the size of the additional data disks attached to the Droplet, in GB.
 data_disk_size = 350
 
 ## -- Specifies the ID of the custom OS image used to provision all RKE2 cluster droplets.
@@ -54,3 +51,15 @@ longhorn_enabled = false
 
 ## -- Specifies the Longhorn Helm chart version to install.
 longhorn_version = null
+
+## -- Specifies whether Rancher should be installed on the Kubernetes cluster.
+rancher_enabled = false
+
+## -- Specifies the Rancher Helm chart version to install.
+rancher_version = null
+
+## -- Specifies the bootstrap administrator password used during Rancher installation. Must be at least 12 characters when Rancher is enabled.
+rancher_bootstrap_password = null
+
+## -- Specifies the TLS certificate source used by Rancher.
+rancher_tls_source = "letsEncrypt"

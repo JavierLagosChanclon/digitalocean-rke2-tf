@@ -13,3 +13,7 @@ output "worker_nodes_public_ip" {
 output "longhorn_url" {
   value = var.longhorn_enabled ? "longhorn.${module.rke2_first_server.instances_public_ip[0]}.sslip.io" : null
 }
+
+output "rancher_url" {
+  value = var.rancher_enabled ? "rancher.${module.rke2_first_server.instances_public_ip[0]}.sslip.io" : null
+}
