@@ -1,17 +1,19 @@
 resource "helm_release" "rancher" {
   count            = var.rancher_enabled ? 1 : 0
+  depends_on       = [null_resource.rancher_tls_secret]
   name             = "rancher"
   namespace        = "cattle-system"
   repository       = "https://releases.rancher.com/server-charts/stable"
   chart            = "rancher"
   version          = var.rancher_version
   create_namespace = true
-
   values = [
     <<EOF
 hostname: ${var.rancher_hostname}
 
 bootstrapPassword: ${var.rancher_bootstrap_password}
+
+privateCA: true
 
 extraEnv:
   - name: CATTLE_SERVER_URL
@@ -20,21 +22,21 @@ extraEnv:
     value: "3600"
 
 ingress:
+  ingressClassName: traefik
+
   tls:
-    source: ${var.rancher_tls_source}
+    source: secret
+    secretName: tls-rancher-ingress
+
   extraAnnotations:
     traefik.ingress.kubernetes.io/proxy-read-timeout: "3600"
     traefik.ingress.kubernetes.io/proxy-send-timeout: "3600"
     traefik.ingress.kubernetes.io/service.serversscheme: "http"
 
-letsEncrypt:
-  ingress:
-    class: traefik
-
 postDelete:
   enabled: false
 
-agentTLSMode: system-store
+agentTLSMode: strict
 EOF
   ]
 }

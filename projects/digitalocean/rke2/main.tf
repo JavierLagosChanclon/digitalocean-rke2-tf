@@ -127,16 +127,9 @@ provider "helm" {
   }
 }
 
-module "cert_manager" {
-  source              = "../../../modules/distribution/cert-manager"
-  depends_on          = [module.rke2_first_server]
-  certmanager_version = var.certmanager_version
-  kubeconfig_path     = local_file.kubeconfig_yaml.filename
-}
-
 module "longhorn" {
   source           = "../../../modules/distribution/longhorn"
-  depends_on       = [module.rke2_first_server, module.cert_manager]
+  depends_on       = [module.rke2_first_server]
   longhorn_enabled = var.longhorn_enabled
   longhorn_host    = "longhorn.${module.rke2_first_server.instances_public_ip[0]}.sslip.io"
   ssh_private_key  = data.local_file.ssh_private_key.content
@@ -149,9 +142,10 @@ module "longhorn" {
 
 module "rancher" {
   source                     = "../../../modules/distribution/rancher"
-  depends_on                 = [module.cert_manager]
+  depends_on                 = [module.rke2_first_server]
   rancher_enabled            = var.rancher_enabled
   rancher_version            = var.rancher_version
   rancher_hostname           = "rancher.${module.rke2_first_server.instances_public_ip[0]}.sslip.io"
   rancher_bootstrap_password = var.rancher_bootstrap_password
+  kubeconfig_path            = local_file.kubeconfig_yaml.filename
 }

@@ -21,7 +21,6 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_cert_manager"></a> [cert\_manager](#module\_cert\_manager) | ../../../modules/distribution/cert-manager | n/a |
 | <a name="module_identity"></a> [identity](#module\_identity) | ../../../modules/identity/ssh | n/a |
 | <a name="module_longhorn"></a> [longhorn](#module\_longhorn) | ../../../modules/distribution/longhorn | n/a |
 | <a name="module_os_image"></a> [os\_image](#module\_os\_image) | ../../../modules/custom-os-image | n/a |
@@ -46,7 +45,6 @@
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_certmanager_version"></a> [certmanager\_version](#input\_certmanager\_version) | Cert-manager Helm chart version. If empty, latest version will be installed. Default is null (latest version). | `string` | `null` | no |
 | <a name="input_data_disk_size"></a> [data\_disk\_size](#input\_data\_disk\_size) | Specifies the size of the additional data disks attached to the Droplet, in GB. Default is '350'. | `number` | `350` | no |
 | <a name="input_do_ssh_key_id"></a> [do\_ssh\_key\_id](#input\_do\_ssh\_key\_id) | Existing SSH key ID to use. If null, module will use or create one. | `string` | `null` | no |
 | <a name="input_do_token"></a> [do\_token](#input\_do\_token) | DigitalOcean API token used to deploy the infrastructure. Default is 'null'. | `string` | `null` | no |

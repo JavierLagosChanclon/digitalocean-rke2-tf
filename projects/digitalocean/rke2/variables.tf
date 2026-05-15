@@ -121,12 +121,6 @@ variable "rke2_ingress" {
   }
 }
 
-variable "certmanager_version" {
-  description = "Cert-manager Helm chart version. If empty, latest version will be installed. Default is null (latest version)."
-  type        = string
-  default     = null
-}
-
 variable "longhorn_enabled" {
   description = "Specifies whether Longhorn should be installed on the Kubernetes cluster. Default is false."
   type        = bool

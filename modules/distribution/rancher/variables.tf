@@ -37,3 +37,9 @@ variable "rancher_tls_source" {
   type        = string
   default     = "letsEncrypt"
 }
+
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig file used by kubectl. Default is null."
+  type        = string
+  default     = null
+}
